@@ -22,6 +22,7 @@ These scripts are called by the executables defined in setup.py.
 from __future__ import with_statement, print_function
 
 import abc
+import os
 import sys
 from optparse import OptionParser
 
