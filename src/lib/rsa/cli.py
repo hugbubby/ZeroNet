@@ -25,6 +25,7 @@ import abc
 import os
 import sys
 from optparse import OptionParser
+import pathlib
 
 import rsa
 import rsa.bigfile
@@ -112,6 +113,19 @@ class CryptoOperation(object):
         self.usage = self.usage % self.__class__.__dict__
         self.input_help = self.input_help % self.__class__.__dict__
         self.output_help = self.output_help % self.__class__.__dict__
+        self.allowed_dirs = [os.getcwd()]  # List of allowed directories
+
+    def validate_path(self, path):
+        """Validate and normalize the given path."""
+        try:
+            normalized_path = os.path.normpath(os.path.abspath(path))
+            path_obj = pathlib.Path(normalized_path)
+            for allowed_dir in self.allowed_dirs:
+                if path_obj.is_relative_to(allowed_dir):
+                    return str(path_obj)
+            raise ValueError("Access to the specified path is not allowed.")
+        except Exception as e:
+            raise ValueError(f"Invalid file path: {e}")
 
     @abc.abstractmethod
     def perform_operation(self, indata, key, cli_args=None):
@@ -166,10 +180,8 @@ class CryptoOperation(object):
         """Reads a public or private key."""
 
         print('Reading %s key from %s' % (self.keyname, filename), file=sys.stderr)
-        abs_path = os.path.abspath(filename)
-        if not abs_path.startswith(os.path.abspath(os.getcwd())):
-            raise ValueError("Invalid file path. Access denied.")
-        with open(abs_path, 'rb') as keyfile:
+        validated_path = self.validate_path(filename)
+        with open(validated_path, 'rb') as keyfile:
             keydata = keyfile.read()
 
         return self.key_class.load_pkcs1(keydata, keyform)
@@ -179,7 +191,8 @@ class CryptoOperation(object):
 
         if inname:
             print('Reading input from %s' % inname, file=sys.stderr)
-            with open(inname, 'rb') as infile:
+            validated_path = self.validate_path(inname)
+            with open(validated_path, 'rb') as infile:
                 return infile.read()
 
         print('Reading input from stdin', file=sys.stderr)
