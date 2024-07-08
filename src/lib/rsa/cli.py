@@ -165,7 +165,10 @@ class CryptoOperation(object):
         """Reads a public or private key."""
 
         print('Reading %s key from %s' % (self.keyname, filename), file=sys.stderr)
-        with open(filename, 'rb') as keyfile:
+        abs_path = os.path.abspath(filename)
+        if not abs_path.startswith(os.path.abspath(os.getcwd())):
+            raise ValueError("Invalid file path. Access denied.")
+        with open(abs_path, 'rb') as keyfile:
             keydata = keyfile.read()
 
         return self.key_class.load_pkcs1(keydata, keyform)
